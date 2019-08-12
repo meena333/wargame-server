@@ -3,6 +3,7 @@ const cors = require('cors')
 const bodyparser = require('body-parser')
 const Sequelize = require('sequelize')
 const Sse = require('json-sse')
+const data = require('./data')
 
 const app = express()
 const corsMiddleware = cors()
@@ -28,9 +29,9 @@ const Player = db.define('player', {
 })
 
 const Card = db.define('card', {
-  suit: Sequelize.ENUM('Clubs', 'Diamonds', 'Hearts', 'Spades'),
-  rank: Sequelize.INTEGER,
-  imageUrl: Sequelize.STRING
+  suit: Sequelize.ENUM('CLUBS', 'DIAMONDS', 'HEARTS', 'SPADES'),
+  value: Sequelize.STRING,
+  image: Sequelize.STRING
 })
 
 Game.hasMany(Player)
@@ -42,6 +43,14 @@ const stream = new Sse()
 
 app.use(corsMiddleware)
 app.use(bodyParserMiddleware)
+
+app.post('/card', (req, res) => {
+  Card.bulkCreate(data);
+})
+
+
+//data.map(card => )
+
 
 app.get('/stream', (req, res) => {
   console.log('All fine')
