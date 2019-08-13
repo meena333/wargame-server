@@ -45,6 +45,7 @@ const stream = new Sse()
 app.use(corsMiddleware)
 app.use(bodyParserMiddleware)
 
+//Card.bulkCreate(data);
 app.post('/card', (req, res) => {
   Card.bulkCreate(data);
 })
@@ -53,24 +54,33 @@ app.post('/card', (req, res) => {
 //data.map(card => )
 
 
-app.get('/stream', (req, res) => {
-  console.log('All fine')
-  res.send('All fine')
+app.get('/stream', async (req, res) => {
+  console.log('console inside stream get')
+  const games = await Game
+    .findAll({ include: [Player] })
+
+  const data = JSON.stringify(games)
+  stream.updateInit(data)
+
+  stream.init(req, res)
+
+
+  //res.send('All fine')
 })
 
 app.post('/game', async (req, res) => {
   const game = await Game.create(req.body)
 
-  // const channels = await Channel.findAll({
-  //   include: [Message]
-  // })
+  const games = await Game.findAll({
+    include: [Player]
+  })
 
-  // const data = JSON.stringify(channels)
+  const data = JSON.stringify(games)
 
-  // stream.updateInit(data)
-  // stream.send(data)
+  stream.updateInit(data)
+  stream.send(data)
 
-  // response.send(channel)
+  res.send(game)
 }
 )
 
