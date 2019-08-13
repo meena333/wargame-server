@@ -4,6 +4,7 @@ const bodyparser = require('body-parser')
 const Sequelize = require('sequelize')
 const Sse = require('json-sse')
 const data = require('./data')
+const auth = require('./auth/middleware')
 
 const app = express()
 const corsMiddleware = cors()
@@ -74,7 +75,7 @@ app.post('/game', async (req, res) => {
 }
 )
 
-app.post('/player', async (req, res) => {
+app.post('/player', auth, async (req, res) => {
   const player = await Player.create(req.body)
 })
 
