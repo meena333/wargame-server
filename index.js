@@ -24,6 +24,7 @@ const Game = db.define('game', {
 
 const Player = db.define('player', {
   name: Sequelize.STRING,
+  email: Sequelize.STRING,
   password: Sequelize.STRING,
   points: Sequelize.INTEGER
 })
