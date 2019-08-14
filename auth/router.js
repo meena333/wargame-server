@@ -5,7 +5,6 @@ const Player = require('../index')
 
 const router = new Router()
 
-// define endpoints here
 router.post('/login', (req, res) => {
 
   if (req.body.email === "" || req.body.password === "") {
