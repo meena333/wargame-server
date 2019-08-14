@@ -11,7 +11,7 @@ const corsMiddleware = cors()
 const bodyParserMiddleware = bodyparser.json()
 const port = process.env.PORT || 4000;
 
-const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:secret@localhost:5432/postgres';
+const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:password@localhost:5432/postgres';
 const db = new Sequelize(databaseUrl)
 
 db.sync({ force: false })
@@ -46,6 +46,7 @@ const stream = new Sse()
 app.use(corsMiddleware)
 app.use(bodyParserMiddleware)
 
+//Card.bulkCreate(data);
 app.post('/card', (req, res) => {
   Card.bulkCreate(data);
 })
@@ -54,24 +55,33 @@ app.post('/card', (req, res) => {
 //data.map(card => )
 
 
-app.get('/stream', (req, res) => {
-  console.log('All fine')
-  res.send('All fine')
+app.get('/stream', async (req, res) => {
+  console.log('console inside stream get')
+  const games = await Game
+    .findAll({ include: [Player] })
+
+  const data = JSON.stringify(games)
+  stream.updateInit(data)
+
+  stream.init(req, res)
+
+
+  //res.send('All fine')
 })
 
 app.post('/game', async (req, res) => {
   const game = await Game.create(req.body)
 
-  // const channels = await Channel.findAll({
-  //   include: [Message]
-  // })
+  const games = await Game.findAll({
+    include: [Player]
+  })
 
-  // const data = JSON.stringify(channels)
+  const data = JSON.stringify(games)
 
-  // stream.updateInit(data)
-  // stream.send(data)
+  stream.updateInit(data)
+  stream.send(data)
 
-  // response.send(channel)
+  res.send(game)
 }
 )
 
@@ -79,7 +89,32 @@ app.post('/player', auth, async (req, res) => {
   const player = await Player.create(req.body)
 })
 
+app.get('/card', async (req, res) => {
+  function shuffle(array) {
+    return array.sort(() => Math.random() - 0.5);
+  }
+
+  const cardsTotal = await Card.findAll()
+  // cardsTotal.map(card => console.log(card.dataValues))
+  const shuffled = shuffle(cardsTotal)
+  const shuffledCardDeck = shuffled//.map(card => card.dataValues)
+
+  const player = await Player.findByPk(1)
+  console.log('shuffled card deck:', shuffledCardDeck)
+  await player.addCard(shuffledCardDeck[0])
+})
+
+app.put('/player/:playerId', (req, res) => {
+  // Player.addCard
+})
+
 app.put('/game/join/:gameId', async (req, res) => {
+  const { gameId } = req.params
+  const playerId = 1
+
+
+
+  Player.update(req.body, { where: { id: playerId } })
   //Update player.gameId, Update game.status, 
   //Card.findAll(), cards.map(card => player.addCard(card)), 
   //player.update({ points: 0 })
