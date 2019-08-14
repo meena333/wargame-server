@@ -69,6 +69,11 @@ app.get('/stream', async (req, res) => {
   //res.send('All fine')
 })
 
+app.get('/game/:gameName', async (req,res) => {
+   const game = await Game.findAll({where : { name: req.params.gameName}})
+   res.send(game)
+})
+
 app.post('/game', async (req, res) => {
   const game = await Game.create(req.body)
 
@@ -85,39 +90,54 @@ app.post('/game', async (req, res) => {
 }
 )
 
-app.post('/player', auth, async (req, res) => {
+app.post('/player', async (req, res) => {
   const player = await Player.create(req.body)
 })
 
-app.get('/card', async (req, res) => {
+app.get('/game/join/:gameId', async (req, res) => {
   function shuffle(array) {
     return array.sort(() => Math.random() - 0.5);
   }
 
-  const cardsTotal = await Card.findAll()
-  // cardsTotal.map(card => console.log(card.dataValues))
-  const shuffled = shuffle(cardsTotal)
-  const shuffledCardDeck = shuffled//.map(card => card.dataValues)
-
+  const game = await Game.findByPk(req.params.gameId)
   const player = await Player.findByPk(1)
-  console.log('shuffled card deck:', shuffledCardDeck)
-  await player.addCard(shuffledCardDeck[0])
+
+  const cardsTotal = await Card.findAll()
+  const shuffledCardDeck = shuffle(cardsTotal)
+  let noOfCards = 0
+  const totalCardsperPlayer = 10
+  let startValue = 0;
+
+  if (game.status == 'joining') {
+    startValue = 0
+  }
+  else {
+    startValue = 10
+  }
+ 
+  for(let i  = startValue; i < shuffledCardDeck.length; i++){ 
+    if (noOfCards < totalCardsperPlayer) {
+      await player.addCard(shuffledCardDeck[i])
+    }
+      noOfCards++
+    }
+  
+  // cardsTotal.map(card => console.log(card.dataValues))
+  
+  // const arr = [1, 2, 3, 4, 5, 6]
+  // const player1Deck = arr.splice(0, 3)
+  // const player2Deck = arr
+  // console.log('player1Deck test', player1Deck)
+  // console.log('player2Deck test', player2Deck)
+
+  // const player = await Player.findByPk(1)
+  // console.log('player test', player)
+  // console.log('shuffled card deck:', shuffledCardDeck)
+  // await player.addCards(shuffledCardDeck[0])
 })
 
 app.put('/player/:playerId', (req, res) => {
   // Player.addCard
-})
-
-app.put('/game/join/:gameId', async (req, res) => {
-  const { gameId } = req.params
-  const playerId = 1
-
-
-
-  Player.update(req.body, { where: { id: playerId } })
-  //Update player.gameId, Update game.status, 
-  //Card.findAll(), cards.map(card => player.addCard(card)), 
-  //player.update({ points: 0 })
 })
 
 app.put('/player/play/:cardId', async (req, res) => {
