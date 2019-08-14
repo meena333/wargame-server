@@ -100,7 +100,7 @@ app.post('/player', async (req, res) => {
   res.send({
     jwt: toJWT({ userId: 1 })
   })
- })
+})
 
 app.put('/game/join/:gameId', async (req, res) => {
   //res.send('Hello')
@@ -108,42 +108,6 @@ app.put('/game/join/:gameId', async (req, res) => {
   function shuffle(array) {
     return array.sort(() => Math.random() - 0.5);
   }
-
-  app.get('/player/login', async (req, res) => {
-    Player
-      .findOne({
-        where: {
-          email: req.body.email
-        }
-      })
-      .then(entity => {
-        const player = entity.dataValues
-        if (!entity) {
-          res.status(400).send({
-            message: 'Player with that email does not exist'
-          })
-        }
-        // 2. use bcrypt.compareSync to check the password against the stored hash
-        if (bcrypt.compareSync(req.body.password, entity.password)) {
-          // 3. if the password is correct, return a JWT with the userId of the user (user.id)
-          console.log('Password is correct')
-          res.send(player)
-        }
-        else {
-          res.status(400).send({
-            message: 'Password was incorrect'
-          })
-        }
-      })
-      .catch(err => {
-        console.error(err)
-        res.status(500).send({
-          message: 'Something went wrong'
-        })
-      })
-  })
-
-
 
   const game = await Game.findByPk(req.params.gameId)
   //const player = await Player.findByPk(req.body.)
@@ -173,6 +137,40 @@ app.put('/game/join/:gameId', async (req, res) => {
 
 app.put('/player/:playerId', (req, res) => {
   // Player.addCard
+})
+
+app.get('/player/login', async (req, res) => {
+  Player
+    .findOne({
+      where: {
+        email: req.body.email
+      }
+    })
+    .then(entity => {
+      const player = entity.dataValues
+      if (!entity) {
+        res.status(400).send({
+          message: 'Player with that email does not exist'
+        })
+      }
+      // 2. use bcrypt.compareSync to check the password against the stored hash
+      if (bcrypt.compareSync(req.body.password, entity.password)) {
+        // 3. if the password is correct, return a JWT with the userId of the user (user.id)
+        console.log('Password is correct')
+        res.send(player)
+      }
+      else {
+        res.status(400).send({
+          message: 'Password was incorrect'
+        })
+      }
+    })
+    .catch(err => {
+      console.error(err)
+      res.status(500).send({
+        message: 'Something went wrong'
+      })
+    })
 })
 
 app.put('/player/play/:cardId', async (req, res) => {
