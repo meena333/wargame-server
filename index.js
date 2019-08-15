@@ -13,7 +13,7 @@ const corsMiddleware = cors()
 const bodyParserMiddleware = bodyparser.json()
 const port = process.env.PORT || 4000;
 
-const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:secret@localhost:5432/postgres';
+const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:password@localhost:5432/postgres';
 const db = new Sequelize(databaseUrl)
 
 db.sync({ force: false })
@@ -141,21 +141,23 @@ app.put('/game/join/:gameId', async (req, res) => {
   function shuffle(array) {
     return array.sort(() => Math.random() - 0.5);
   }
-
-
   const game = await Game.findByPk(req.params.gameId)
+  console.log('game', game)
+  
   console.log('req.body from join', req.body)
   const player = await Player.findByPk(req.body.id)
-  player.update({ gameId: req.params.gameId, points: 0 })
+  await player.update({ gameId: req.params.gameId, points: 0 })
 
-  const count = Player.findAndCountAll({
+  const countObject = await Player.findAndCountAll({
     where: {
       gameId: req.params.gameId
     }
   })
 
+  const count = countObject.count
+  console.log('count!!!!!!', count)
   if (count === 2) {
-    game.status = 'full'
+    game.update({status: 'full'})
   }
 
   const cardsTotal = await Card.findAll()
@@ -187,10 +189,16 @@ app.put('/player/resetcards/:playerId', async (req, res) => {
     cardArray.push(i)
   }
   const player = await Player.findByPk(req.params.playerId)
+  const game = await Game.findOne({ where: { id: player.gameId } })
+  await game.update({
+    status: 'joining'
+  })
   const result = await player.removeCards(cardArray)
+  //await player.removeGame(req.params.gameId)
+  await player.update({ gameId: null })
   res.send('cards removed for player')
   await update()
-})
+ })
 
 app.put('/player/:playerId', (req, res) => {
   // Player.addCard
