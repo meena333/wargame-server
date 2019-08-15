@@ -75,11 +75,9 @@ async function update() {
 }
 
 app.get('/card/:playerId', async (req, res) => {
-  const cards = await Card.findAll({
-    where: {
-      playerId: req.params.playerId
-    }
-  })
+
+  const player = await Player.findByPk(req.params.playerId)
+  const cards = await player.getCards()
   res.send(cards)
   update()
 })
@@ -144,10 +142,21 @@ app.put('/game/join/:gameId', async (req, res) => {
     return array.sort(() => Math.random() - 0.5);
   }
 
+
   const game = await Game.findByPk(req.params.gameId)
   console.log('req.body from join', req.body)
   const player = await Player.findByPk(req.body.id)
   player.update({ gameId: req.params.gameId, points: 0 })
+
+  const count = Player.findAndCountAll({
+    where: {
+      gameId: req.params.gameId
+    }
+  })
+
+  if (count === 2) {
+    game.status = 'full'
+  }
 
   const cardsTotal = await Card.findAll()
   const shuffledCardDeck = shuffle(cardsTotal)
