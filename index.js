@@ -13,7 +13,7 @@ const corsMiddleware = cors()
 const bodyParserMiddleware = bodyparser.json()
 const port = process.env.PORT || 4000;
 
-const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:password@localhost:5432/postgres';
+const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:secret@localhost:5432/postgres';
 const db = new Sequelize(databaseUrl)
 
 db.sync({ force: false })
@@ -49,12 +49,33 @@ app.use(corsMiddleware)
 app.use(bodyParserMiddleware)
 
 //Card.bulkCreate(data);
-app.post('/card', (req, res) => {
-  Card.bulkCreate(data);
+// app.post('/card', async (req, res) => {
+//   console.log('reset card')
+//   await Card.destroy({
+//     where: {},
+//     truncate: true
+//   })
+//   await Card.bulkCreate(data);
+// })
+
+app.get('/card/:playerId', async (req, res) => {
+  const cards = await Card.findAll({
+    where: {
+      playerId: req.params.playerId
+    }
+  })
+  res.send(cards)
 })
 
+//reset all the playerIds in the Cards table to null
+app.put('/card', async (req, res) => {
+  const Op = Sequelize.Op;
+  const result = await Card.update({ playerId: null }, {
+    where: { id: { [Op.gte]: 0 } }
+  })
+  res.send(result)
+})
 
-//data.map(card => )
 
 
 app.get('/stream', async (req, res) => {
@@ -84,6 +105,12 @@ app.get('/game/:gameName', async (req, res) => {
   res.send(game)
 })
 
+// app.get('/game/:gameId', async (req, res) => {
+//   console.log(req.params.gameId)
+//   const game = await Game.findByPk(req.params.gameId)
+//   res.send(game)
+// })
+
 app.post('/game', async (req, res) => {
   const game = await Game.create(req.body)
 
@@ -103,14 +130,15 @@ app.post('/player', async (req, res) => {
 })
 
 app.put('/game/join/:gameId', async (req, res) => {
-  //res.send('Hello')
-  console.log('Request body', req.body)
+
   function shuffle(array) {
     return array.sort(() => Math.random() - 0.5);
   }
 
   const game = await Game.findByPk(req.params.gameId)
-  //const player = await Player.findByPk(req.body.)
+  console.log('req.body from join', req.body)
+  const player = await Player.findByPk(req.body.id)
+  player.update({ gameId: req.params.gameId, points: 0 })
 
   const cardsTotal = await Card.findAll()
   const shuffledCardDeck = shuffle(cardsTotal)
@@ -143,7 +171,7 @@ app.get('/player/login', async (req, res) => {
   Player
     .findOne({
       where: {
-        email: req.body.email
+        email: req.query.email
       }
     })
     .then(entity => {
@@ -154,15 +182,14 @@ app.get('/player/login', async (req, res) => {
         })
       }
       // 2. use bcrypt.compareSync to check the password against the stored hash
-      if (bcrypt.compareSync(req.body.password, entity.password)) {
+      if (bcrypt.compareSync(req.query.password, entity.password)) {
         // 3. if the password is correct, return a JWT with the userId of the user (user.id)
         console.log('Password is correct')
         res.send(player)
       }
       else {
-        res.status(400).send({
-          message: 'Password was incorrect'
-        })
+        console.log('Password is incorrect')
+        res.send({})
       }
     })
     .catch(err => {
