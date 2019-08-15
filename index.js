@@ -13,7 +13,7 @@ const corsMiddleware = cors()
 const bodyParserMiddleware = bodyparser.json()
 const port = process.env.PORT || 4000;
 
-const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:password@localhost:5432/postgres';
+const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:secret@localhost:5432/postgres';
 const db = new Sequelize(databaseUrl)
 
 db.sync({ force: false })
@@ -143,7 +143,7 @@ app.put('/game/join/:gameId', async (req, res) => {
   }
   const game = await Game.findByPk(req.params.gameId)
   console.log('game', game)
-  
+
   console.log('req.body from join', req.body)
   const player = await Player.findByPk(req.body.id)
   await player.update({ gameId: req.params.gameId, points: 0 })
@@ -157,7 +157,7 @@ app.put('/game/join/:gameId', async (req, res) => {
   const count = countObject.count
   console.log('count!!!!!!', count)
   if (count === 2) {
-    game.update({status: 'full'})
+    game.update({ status: 'full' })
   }
 
   const cardsTotal = await Card.findAll()
@@ -198,13 +198,14 @@ app.put('/player/resetcards/:playerId', async (req, res) => {
   await player.update({ gameId: null })
   res.send('cards removed for player')
   await update()
- })
+})
 
 app.put('/player/:playerId', (req, res) => {
   // Player.addCard
 })
 
 app.get('/player/login', async (req, res) => {
+  let player;
   Player
     .findOne({
       where: {
@@ -212,30 +213,33 @@ app.get('/player/login', async (req, res) => {
       }
     })
     .then(entity => {
-      const player = entity.dataValues
       if (!entity) {
         res.status(400).send({
-          message: 'Player with that email does not exist'
+          //message: 'Player with that email does not exist'
+          message: 'unverified'
         })
+      }
+      else {
+        player = entity.dataValues
       }
       // 2. use bcrypt.compareSync to check the password against the stored hash
       if (bcrypt.compareSync(req.query.password, entity.password)) {
         // 3. if the password is correct, return a JWT with the userId of the user (user.id)
         console.log('Password is correct')
-        res.send(player)
-        // res.send({
-        //   jwt: toJWT({ userId: player.id })
-        // })
+        //res.send(player)
+        res.status(200).send({
+          jwt: toJWT({ userId: player.id }), message: 'verified', name: player.name, id: player.id, points: player.points
+        })
       }
       else {
         console.log('Password is incorrect')
-        res.send({})
+        res.send({ message: 'unverified' })
       }
     })
     .catch(err => {
       console.error(err)
       res.status(500).send({
-        message: 'Something went wrong'
+        message: 'unverified'
       })
     })
 })
