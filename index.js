@@ -40,23 +40,39 @@ const Card = db.define('card', {
 
 Game.hasMany(Player)
 Player.belongsTo(Game)
-Player.hasMany(Card)
-Card.belongsToMany(Player, { through: 'PlayerCards' })
+Player.belongsToMany(Card, { through: 'PlayerCards' })
+Card.belongsToMany(Player, { through: 'PlayerCards', as: "cards" })
 
 const stream = new Sse()
 
 app.use(corsMiddleware)
 app.use(bodyParserMiddleware)
 
-//Card.bulkCreate(data);
-// app.post('/card', async (req, res) => {
-//   console.log('reset card')
-//   await Card.destroy({
-//     where: {},
-//     truncate: true
-//   })
-//   await Card.bulkCreate(data);
-// })
+prefillCardData();
+
+//add card data (52 cards) if it isn't already there
+async function prefillCardData() {
+  const result = await Card.findOne({ where: { suit: 'CLUBS' } })
+  if (!result) {
+    Card.bulkCreate(data);
+  }
+}
+
+async function update() {
+  const games = await Game.findAll({
+    include: [{
+      model: Player,
+      include: [{
+        model: Card,
+        include: [
+          { association: 'cards' }
+        ]
+      }]
+    }]
+  })
+  const data = JSON.stringify(games)
+  stream.send(data)
+}
 
 app.get('/card/:playerId', async (req, res) => {
   const cards = await Card.findAll({
@@ -65,6 +81,7 @@ app.get('/card/:playerId', async (req, res) => {
     }
   })
   res.send(cards)
+  update()
 })
 
 //reset all the playerIds in the Cards table to null
@@ -92,13 +109,7 @@ app.get('/stream', async (req, res) => {
   //res.send('All fine')
 })
 
-async function update() {
-  const games = await Game.findAll({
-    include: [Player]
-  })
-  const data = JSON.stringify(games)
-  stream.send(data)
-}
+
 
 app.get('/game/:gameName', async (req, res) => {
   const game = await Game.findOne({ where: { name: req.params.gameName } })
@@ -114,15 +125,15 @@ app.get('/game/:gameName', async (req, res) => {
 app.post('/game', async (req, res) => {
   const game = await Game.create(req.body)
 
-  await update()
+
 
   res.send(game)
+  await update()
 })
 
 app.post('/player', async (req, res) => {
   const encryptedPw = bcrypt.hashSync(req.body.password, 10)
-  const { name } = req.body
-  const { email } = req.body
+  const { name, email } = req.body
   const player = await Player.create({ name, email, password: encryptedPw })
   res.send({
     jwt: toJWT({ userId: 1 })
