@@ -124,9 +124,6 @@ app.get('/game/:gameName', async (req, res) => {
 
 app.post('/game', async (req, res) => {
   const game = await Game.create(req.body)
-
-
-
   res.send(game)
   await update()
 })
@@ -135,9 +132,10 @@ app.post('/player', async (req, res) => {
   const encryptedPw = bcrypt.hashSync(req.body.password, 10)
   const { name, email } = req.body
   const player = await Player.create({ name, email, password: encryptedPw })
-  res.send({
-    jwt: toJWT({ userId: 1 })
-  })
+  // res.send({
+  //   jwt: toJWT({ userId: player.id })
+  // })
+  res.send(player)
 })
 
 app.put('/game/join/:gameId', async (req, res) => {
@@ -171,7 +169,18 @@ app.put('/game/join/:gameId', async (req, res) => {
     noOfCards++
   }
 
-  update()
+  await update()
+})
+
+app.put('/player/resetcards/:playerId', async (req, res) => {
+  const cardArray = []
+  for (let i = 1; i < 53; i++) {
+    cardArray.push(i)
+  }
+  const player = await Player.findByPk(req.params.playerId)
+  const result = await player.removeCards(cardArray)
+  res.send('cards removed for player')
+  await update()
 })
 
 app.put('/player/:playerId', (req, res) => {
@@ -197,6 +206,9 @@ app.get('/player/login', async (req, res) => {
         // 3. if the password is correct, return a JWT with the userId of the user (user.id)
         console.log('Password is correct')
         res.send(player)
+        // res.send({
+        //   jwt: toJWT({ userId: player.id })
+        // })
       }
       else {
         console.log('Password is incorrect')
