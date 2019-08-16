@@ -254,6 +254,24 @@ app.get('/player/login', async (req, res) => {
     })
 })
 
+function getValue(card) {
+  const { value } = card
+
+  switch (value) {
+    case 'ACE':
+      return 14
+    case 'KING':
+      return 13
+    case 'QUEEN':
+      return 12
+    case 'JACK':
+      return 11
+    default:
+      return parseInt(value)
+  }
+
+}
+
 app.put('/player/play/:gameId/:playerId/:cardId', async (req, res) => {
   //player.update({ playedId: request.params.cardId }), if (otherPersonPlayed), player.update({ points: player.points + 1, playedId: null }), player.removeCard(cardId?), if (allCardsGone) game.update({ status: ‘done’ })
   //compare cards from both players to determine winner
@@ -268,39 +286,47 @@ app.put('/player/play/:gameId/:playerId/:cardId', async (req, res) => {
     }
   })
 
-  if (players.length === 2) {
-    //res.send(players[0].cardPlayed)
+  const played = players.filter(player => player.cardPlayed)
 
+  if (played.length === players.length) {
+    let winning = -1
 
-    playerCards = players.map(player => player.cardPlayed)
-    res.send(playerCards)
-  }
-  else {
+    const plays = played.map(player = async () => {
+      const card = await Card.findByPk(player.cardPlayed)
+      const value = getValue(card)
+
+      await player.removeCard(card)
+
+      return { player, value }
+    })
+
+    plays.map(play => {
+      const { value } = play
+
+      winning = value > winning
+        ? value
+        : winning
+    })
+
+    const winners = plays.filter(play => {
+      const { player, value } = play
+
+      const highEnough = value >= winning
+
+      return player
+    })
+
+    if (winners.length === 1) {
+      const winner = winners[0]
+      await winner.update({ points: winner.points + 1 })
+    }
+
+    await update()
+
+    res.send(winners)
+  } else {
     res.send('not really')
   }
-  //check if other player has cardPlayed != null
-  //if players[0].cardPlayed and players[1].cardPlayed
-  // player0card = Card.findOne(players[0].cardPlayed)
-  //player1card = Card.findOne(players[1].cardPlayed)
-  //if (player0card == 'ACE') { player0cardvalue = 14}
-  //if (player0card == 'KING') { player0cardvalue = 13}
-  //if (player0card == 'QUEEN') { player0cardvalue = 12}
-  //(player0card == 'JACK') { player0cardvalue = 11}
-  //else player0cardvalue = parseInt(player0card)
-
-  //if (player1card == 'ACE') { player1cardvalue = 14}
-  //if (player1card == 'KING') { player1cardvalue = 13}
-  //if (player1card == 'QUEEN') { player1cardvalue = 12}
-  //(player1card == 'JACK') { player1cardvalue = 11}
-  //else player1cardvalue = parseInt(player1card)
-
-  //if player0cardvalue < player1cardvalue 
-  // players[1].points++
-  //else
-  //players[0].points++
-
-  // await update()
-  // res.send(players)
 })
 
 app.listen(port, () => console.log('Listening on port', port))
