@@ -130,10 +130,10 @@ app.post('/player', async (req, res) => {
   const encryptedPw = bcrypt.hashSync(req.body.password, 10)
   const { name, email } = req.body
   const player = await Player.create({ name, email, password: encryptedPw })
-  // res.send({
-  //   jwt: toJWT({ userId: player.id })
-  // })
-  res.send(player)
+  res.status(200).send({
+    jwt: toJWT({ userId: player.id }), message: 'unverified', name: player.name, id: player.id, points: player.points
+  })
+  //res.send(player)
 })
 
 app.put('/game/join/:gameId', async (req, res) => {
