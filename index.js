@@ -29,7 +29,8 @@ const Player = db.define('player', {
   name: Sequelize.STRING,
   email: Sequelize.STRING,
   password: Sequelize.STRING,
-  points: Sequelize.INTEGER
+  points: Sequelize.INTEGER,
+  cardPlayed: Sequelize.INTEGER
 })
 
 const Card = db.define('card', {
@@ -213,10 +214,6 @@ app.put('/player/resetcards/:playerId', async (req, res) => {
   await update()
 })
 
-app.put('/player/:playerId', (req, res) => {
-  // Player.addCard
-})
-
 app.get('/player/login', async (req, res) => {
   let player;
   Player
@@ -257,8 +254,53 @@ app.get('/player/login', async (req, res) => {
     })
 })
 
-app.put('/player/play/:cardId', async (req, res) => {
+app.put('/player/play/:gameId/:playerId/:cardId', async (req, res) => {
   //player.update({ playedId: request.params.cardId }), if (otherPersonPlayed), player.update({ points: player.points + 1, playedId: null }), player.removeCard(cardId?), if (allCardsGone) game.update({ status: ‘done’ })
+  //compare cards from both players to determine winner
+  //so get cards from both players belonging to the gameID
+  const player = await Player.findByPk(req.params.playerId)
+  await player.update({ cardPlayed: req.params.cardId })
+  //const card = await Card.findOne(req.params.cardId)
+  const game = await Game.findByPk(req.params.gameId)
+  const players = await Player.findAll({
+    where: {
+      gameId: req.params.gameId
+    }
+  })
+
+  if (players.length === 2) {
+    //res.send(players[0].cardPlayed)
+
+
+    playerCards = players.map(player => player.cardPlayed)
+    res.send(playerCards)
+  }
+  else {
+    res.send('not really')
+  }
+  //check if other player has cardPlayed != null
+  //if players[0].cardPlayed and players[1].cardPlayed
+  // player0card = Card.findOne(players[0].cardPlayed)
+  //player1card = Card.findOne(players[1].cardPlayed)
+  //if (player0card == 'ACE') { player0cardvalue = 14}
+  //if (player0card == 'KING') { player0cardvalue = 13}
+  //if (player0card == 'QUEEN') { player0cardvalue = 12}
+  //(player0card == 'JACK') { player0cardvalue = 11}
+  //else player0cardvalue = parseInt(player0card)
+
+  //if (player1card == 'ACE') { player1cardvalue = 14}
+  //if (player1card == 'KING') { player1cardvalue = 13}
+  //if (player1card == 'QUEEN') { player1cardvalue = 12}
+  //(player1card == 'JACK') { player1cardvalue = 11}
+  //else player1cardvalue = parseInt(player1card)
+
+  //if player0cardvalue < player1cardvalue 
+  // players[1].points++
+  //else
+  //players[0].points++
+
+  // await update()
+  // res.send(players)
 })
 
 app.listen(port, () => console.log('Listening on port', port))
