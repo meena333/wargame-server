@@ -22,7 +22,7 @@ db.sync({ force: false })
 
 const Game = db.define('game', {
   name: Sequelize.STRING,
-  status: Sequelize.ENUM('joining', 'full')
+  status: Sequelize.ENUM('joining', 'full', 'started')
 })
 
 const Player = db.define('player', {
@@ -62,12 +62,9 @@ async function update() {
   const games = await Game.findAll({
     include: [{
       model: Player,
-      include: [{
-        model: Card,
-        include: [
-          { association: 'cards' }
-        ]
-      }]
+      include: [
+        { association: 'cards' }
+      ]
     }]
   })
   const data = JSON.stringify(games)
@@ -127,34 +124,61 @@ app.post('/game', async (req, res) => {
 })
 
 app.post('/player', async (req, res) => {
-  const encryptedPw = bcrypt.hashSync(req.body.password, 10)
-  const { name, email } = req.body
-  const player = await Player.create({ name, email, password: encryptedPw })
-  res.status(200).send({
-    jwt: toJWT({ userId: player.id }), message: 'unverified', name: player.name, id: player.id, points: player.points
-  })
-  //res.send(player)
+  const { name, email, password } = req.body
+
+  const existing = await Player.findOne({ where: { email } })
+
+  console.log('existing test:', existing)
+
+  if (existing) {
+    res.status(400).send(`The email ${email} is already in use`)
+  } else {
+    const encryptedPw = bcrypt.hashSync(password, 10)
+
+    const player = await Player.create({ name, email, password: encryptedPw })
+
+    res.status(200).send({
+      jwt: toJWT({ userId: player.id }),
+      message: 'unverified',
+      name: player.name,
+      id: player.id,
+      points: player.points
+    })
+  }
+})
+
+app.put('/game/start/:gameId', async (request, response) => {
+  const { gameId } = request.params
+  const game = await Game.findByPk(gameId)
+
+  if (game.status === 'full') {
+    const updated = await game.update({ status: 'started' })
+
+    await update()
+
+    response.send(updated)
+  } else {
+    response.send('Waiting for more players')
+  }
 })
 
 app.put('/game/join/:gameId', async (req, res) => {
-
   function shuffle(array) {
     return array.sort(() => Math.random() - 0.5);
   }
+
   const game = await Game.findByPk(req.params.gameId)
   console.log('game', game)
 
   console.log('req.body from join', req.body)
   const player = await Player.findByPk(req.body.id)
-  await player.update({ gameId: req.params.gameId, points: 0 })
+  const updated = await player.update({ gameId: req.params.gameId, points: 0 })
 
-  const countObject = await Player.findAndCountAll({
+  const count = await Player.count({
     where: {
       gameId: req.params.gameId
     }
   })
-
-  const count = countObject.count
   console.log('count!!!!!!', count)
   if (count === 2) {
     game.update({ status: 'full' })
@@ -162,25 +186,14 @@ app.put('/game/join/:gameId', async (req, res) => {
 
   const cardsTotal = await Card.findAll()
   const shuffledCardDeck = shuffle(cardsTotal)
-  let noOfCards = 0
-  const totalCardsperPlayer = 10
-  let startValue = 0;
 
-  if (game.status == 'joining') {
-    startValue = 0
-  }
-  else {
-    startValue = 10
-  }
-
-  for (let i = startValue; i < shuffledCardDeck.length; i++) {
-    if (noOfCards < totalCardsperPlayer) {
-      await player.addCard(shuffledCardDeck[i])
-    }
-    noOfCards++
+  for (let i = 0; i < 10; i++) {
+    await player.addCard(shuffledCardDeck[i])
   }
 
   await update()
+
+  res.send(updated)
 })
 
 app.put('/player/resetcards/:playerId', async (req, res) => {
